@@ -12,6 +12,9 @@ import base64
 import sqlite3
 import os
 from fpdf import FPDF
+import traceback
+import logging
+from contextlib import contextmanager
 
 # Import our custom modules
 from database import (
@@ -23,12 +26,20 @@ from database import (
     get_investment_transactions,
     update_actual_spent, get_financial_summary, get_monthly_financial_data,
     get_expense_by_category, get_payroll_summary, get_salary_by_department,
-    check_budget_alerts
+    check_budget_alerts, get_transaction_count, search_transactions, get_transaction_count_filtered
 )
 from calculations import (
     calculate_net_pay, format_currency, format_percentage, calculate_budget_variance
 )
+from backup_restore import (
+    create_database_backup, get_available_backups, restore_from_backup, delete_backup
+)
+from datetime import datetime
 
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Initialize the database
 init_db()
@@ -218,6 +229,22 @@ def main():
         st.session_state.editing_transaction = None
     if 'editing_transaction_data' not in st.session_state:
         st.session_state.editing_transaction_data = None
+    
+    # Initialize loading states
+    if 'loading' not in st.session_state:
+        st.session_state.loading = False
+    
+    # Initialize search and filter states
+    if 'search_query' not in st.session_state:
+        st.session_state.search_query = ''
+    if 'date_filter_start' not in st.session_state:
+        st.session_state.date_filter_start = None
+    if 'date_filter_end' not in st.session_state:
+        st.session_state.date_filter_end = None
+    if 'category_filter' not in st.session_state:
+        st.session_state.category_filter = 'All'
+    if 'type_filter' not in st.session_state:
+        st.session_state.type_filter = 'All'
     
     # Display budget alerts
     display_budget_alerts()
@@ -573,6 +600,19 @@ def show_add_transaction():
     st.header("💸 Add New Transaction")
     st.markdown('<div class="section-header"></div>', unsafe_allow_html=True)
     
+    # Validation function
+    def validate_transaction(date, description, category, amount, trans_type):
+        errors = []
+        if not description or description.strip() == "":
+            errors.append("Description is required")
+        if not category or category.strip() == "":
+            errors.append("Category is required")
+        if amount <= 0:
+            errors.append("Amount must be greater than 0")
+        if not date:
+            errors.append("Date is required")
+        return errors
+    
     # Quick-add common transactions
     st.subheader("Quick Add Common Transactions")
     
@@ -641,12 +681,18 @@ def show_add_transaction():
         submitted = st.form_submit_button("Add Transaction")
         
         if submitted:
-            if description and category and amount > 0:
-                add_transaction(date, description, category, amount, trans_type)
-                st.success("Transaction added successfully!")
-                st.rerun()
-            else:
-                st.error("Please fill in all fields with valid values.")
+            try:
+                validation_errors = validate_transaction(date, description, category, amount, trans_type)
+                if validation_errors:
+                    for error in validation_errors:
+                        st.error(error)
+                else:
+                    add_transaction(date, description, category, amount, trans_type)
+                    st.success("Transaction added successfully!")
+                    st.rerun()
+            except Exception as e:
+                logger.error(f"Error adding transaction: {str(e)}\n{traceback.format_exc()}")
+                st.error(f"Failed to add transaction: {str(e)}")
 
     # Display existing transactions with edit and delete options
     st.subheader("📋 Existing Transactions")
@@ -685,12 +731,57 @@ def show_add_transaction():
                 st.session_state.editing_transaction_data = None
                 st.rerun()
     
+    # Initialize pagination in session state if not already set
+    if 'transaction_page' not in st.session_state:
+        st.session_state.transaction_page = 1
+    
+    # Add search and filter controls
+    st.subheader("🔍 Search & Filter Transactions")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.session_state.search_query = st.text_input("Search Description/Category", value=st.session_state.search_query)
+    with col2:
+        st.session_state.date_filter_start = st.date_input("Start Date", value=st.session_state.date_filter_start)
+    with col3:
+        st.session_state.date_filter_end = st.date_input("End Date", value=st.session_state.date_filter_end)
+    with col4:
+        # Get all available categories
+        all_transactions = get_transactions()  # Get all for category options
+        categories = ['All'] + sorted(all_transactions['category'].unique().tolist()) if not all_transactions.empty else ['All']
+        st.session_state.category_filter = st.selectbox("Category", options=categories, index=categories.index(st.session_state.category_filter) if st.session_state.category_filter in categories else 0)
+        
+        # Get all available types
+        types = ['All'] + sorted(all_transactions['type'].unique().tolist()) if not all_transactions.empty else ['All']
+        st.session_state.type_filter = st.selectbox("Type", options=types, index=types.index(st.session_state.type_filter) if st.session_state.type_filter in types else 0)
+    
     # Refresh transactions dataframe after potential edit/deletion
-    transactions_df = get_transactions()
+    page_size = 20  # Show 20 transactions per page
+    
+    # Apply search and filters
+    transactions_df = search_transactions(
+        query=st.session_state.search_query if st.session_state.search_query else None,
+        start_date=st.session_state.date_filter_start,
+        end_date=st.session_state.date_filter_end,
+        category=st.session_state.category_filter if st.session_state.category_filter != 'All' else None,
+        trans_type=st.session_state.type_filter if st.session_state.type_filter != 'All' else None,
+        page=st.session_state.transaction_page,
+        page_size=page_size
+    )
+    
+    # Get total count for pagination
+    total_transactions = get_transaction_count_filtered(
+        query=st.session_state.search_query if st.session_state.search_query else None,
+        start_date=st.session_state.date_filter_start,
+        end_date=st.session_state.date_filter_end,
+        category=st.session_state.category_filter if st.session_state.category_filter != 'All' else None,
+        trans_type=st.session_state.type_filter if st.session_state.type_filter != 'All' else None
+    )
+    total_pages = (total_transactions + page_size - 1) // page_size  # Ceiling division
     
     if not transactions_df.empty:
         # Display transactions with edit and delete buttons
-        st.subheader("All Transactions")
+        st.subheader(f"All Transactions (Page {st.session_state.transaction_page} of {total_pages})")
         for index, row in transactions_df.iterrows():
             col1, col2, col3, col4, col5, col6, col7 = st.columns([2, 2, 2, 1, 2, 1, 1])
             col1.write(str(row['date']))
@@ -712,6 +803,19 @@ def show_add_transaction():
                     delete_transaction(row['id'])
                     st.success(f"Transaction '{row['description']}' deleted successfully!")
                     st.rerun()
+        
+        # Pagination controls
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col1:
+            if st.button("◀️ Previous", disabled=(st.session_state.transaction_page <= 1)):
+                st.session_state.transaction_page -= 1
+                st.rerun()
+        with col2:
+            st.write(f"Page {st.session_state.transaction_page} of {total_pages}")
+        with col3:
+            if st.button("Next ▶️", disabled=(st.session_state.transaction_page >= total_pages)):
+                st.session_state.transaction_page += 1
+                st.rerun()
         
         # Export transactions data
         csv = convert_df_to_csv(transactions_df)
@@ -748,12 +852,16 @@ def show_manage_employees():
         submitted = st.form_submit_button("Add Employee")
         
         if submitted:
-            if name and department and base_salary > 0:
-                add_employee(name, department, base_salary, tax_rate, deductions)
-                st.success("Employee added successfully!")
-                st.rerun()
-            else:
-                st.error("Please fill in all fields with valid values.")
+            try:
+                if name and department and base_salary > 0:
+                    add_employee(name, department, base_salary, tax_rate, deductions)
+                    st.success("Employee added successfully!")
+                    st.rerun()
+                else:
+                    st.error("Please fill in all fields with valid values.")
+            except Exception as e:
+                logger.error(f"Error adding employee: {str(e)}\n{traceback.format_exc()}")
+                st.error(f"Failed to add employee: {str(e)}")
     
     # Display and edit employees
     st.subheader("📋 Employee Records")
@@ -825,12 +933,16 @@ def show_set_budgets():
         submitted = st.form_submit_button("Add Budget")
         
         if submitted:
-            if category and monthly_budget > 0:
-                add_budget(category, monthly_budget)
-                st.success("Budget category added successfully!")
-                st.rerun()
-            else:
-                st.error("Please fill in all fields with valid values.")
+            try:
+                if category and monthly_budget > 0:
+                    add_budget(category, monthly_budget)
+                    st.success("Budget category added successfully!")
+                    st.rerun()
+                else:
+                    st.error("Please fill in all fields with valid values.")
+            except Exception as e:
+                logger.error(f"Error adding budget: {str(e)}\n{traceback.format_exc()}")
+                st.error(f"Failed to add budget: {str(e)}")
     
     # Display and edit budgets
     st.subheader("📋 Budget Categories")
@@ -952,17 +1064,61 @@ def show_reports():
     
     st.subheader("📄 Generate PDF Report")
     if st.button("🖨️ Generate PDF Report"):
-        # Generate PDF report
-        pdf = generate_pdf_report()
-        st.success("PDF report generated successfully!")
-        
-        # Provide download button for the PDF
-        st.download_button(
-            label="📥 Download PDF Report",
-            data=pdf,
-            file_name='financial_report.pdf',
-            mime='application/pdf'
-        )
+        try:
+            with st.spinner('Generating PDF report...'):
+                # Generate PDF report
+                pdf = generate_pdf_report()
+            st.success("PDF report generated successfully!")
+            
+            # Provide download button for the PDF
+            st.download_button(
+                label="📥 Download PDF Report",
+                data=pdf,
+                file_name='financial_report.pdf',
+                mime='application/pdf'
+            )
+        except Exception as e:
+            logger.error(f"Error generating PDF report: {str(e)}\n{traceback.format_exc()}")
+            st.error(f"Failed to generate PDF report: {str(e)}")
+    
+    # Database backup and restore section
+    st.subheader("💾 Database Backup & Restore")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("Create Database Backup"):
+            try:
+                with st.spinner('Creating backup...'):
+                    backup_path = create_database_backup()
+                st.success(f"Backup created successfully: {os.path.basename(backup_path)}")
+            except Exception as e:
+                logger.error(f"Error creating backup: {str(e)}\n{traceback.format_exc()}")
+                st.error(f"Failed to create backup: {str(e)}")
+    
+    with col2:
+        # Show available backups
+        try:
+            backups = get_available_backups()
+            if backups:
+                selected_backup = st.selectbox("Select Backup to Restore", 
+                                              options=[b['name'] for b in backups],
+                                              format_func=lambda x: f"{x} ({datetime.fromisoformat(backups[0]['created']).strftime('%Y-%m-%d %H:%M:%S') if backups else ''})")
+                
+                if st.button("Restore Selected Backup", type="secondary"):
+                    try:
+                        with st.spinner('Restoring backup... This will overwrite current data!'):
+                            success = restore_from_backup(selected_backup)
+                        if success:
+                            st.success(f"Database restored successfully from: {selected_backup}")
+                            st.rerun()
+                    except Exception as e:
+                        logger.error(f"Error restoring backup: {str(e)}\n{traceback.format_exc()}")
+                        st.error(f"Failed to restore backup: {str(e)}")
+            else:
+                st.info("No backups available")
+        except Exception as e:
+            logger.error(f"Error listing backups: {str(e)}\n{traceback.format_exc()}")
+            st.error(f"Failed to list backups: {str(e)}")
 
 
 def generate_pdf_report():
@@ -1086,12 +1242,16 @@ def show_manage_investments():
         submitted = st.form_submit_button("Add Investment")
         
         if submitted:
-            if investor_name and amount > 0:
-                add_investment(investor_name, investment_type, investment_date, amount, equity_percentage, status)
-                st.success("Investment added successfully!")
-                st.rerun()
-            else:
-                st.error("Please fill in all fields with valid values.")
+            try:
+                if investor_name and amount > 0:
+                    add_investment(investor_name, investment_type, investment_date, amount, equity_percentage, status)
+                    st.success("Investment added successfully!")
+                    st.rerun()
+                else:
+                    st.error("Please fill in all fields with valid values.")
+            except Exception as e:
+                logger.error(f"Error adding investment: {str(e)}\n{traceback.format_exc()}")
+                st.error(f"Failed to add investment: {str(e)}")
     
     # Display and edit investments
     st.subheader("📋 Investment Records")
@@ -1172,12 +1332,16 @@ def show_manage_loans():
         submitted = st.form_submit_button("Add Loan")
         
         if submitted:
-            if lender_name and principal_amount > 0 and monthly_payment > 0 and total_payments > 0:
-                add_loan(lender_name, loan_type, loan_date, principal_amount, interest_rate/100, monthly_payment, total_payments, remaining_payments, loan_direction, status)
-                st.success("Loan added successfully!")
-                st.rerun()
-            else:
-                st.error("Please fill in all fields with valid values.")
+            try:
+                if lender_name and principal_amount > 0 and monthly_payment > 0 and total_payments > 0:
+                    add_loan(lender_name, loan_type, loan_date, principal_amount, interest_rate/100, monthly_payment, total_payments, remaining_payments, loan_direction, status)
+                    st.success("Loan added successfully!")
+                    st.rerun()
+                else:
+                    st.error("Please fill in all fields with valid values.")
+            except Exception as e:
+                logger.error(f"Error adding loan: {str(e)}\n{traceback.format_exc()}")
+                st.error(f"Failed to add loan: {str(e)}")
     
     # Display and edit loans
     st.subheader("📋 Loan Records")

@@ -3,6 +3,7 @@ REST API for Algo Hub Financial Dashboard
 """
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import HTTPBearer
+import os
 import jwt
 from pydantic import BaseModel
 from typing import List, Optional
@@ -32,8 +33,9 @@ class TransactionUpdate(BaseModel):
 # Authentication dependency
 def verify_token(token: str = Depends(security)):
     try:
-        # Verify JWT token
-        payload = jwt.decode(token.credentials, "SECRET_KEY", algorithms=["HS256"])
+        # Verify JWT token using environment variable
+        secret_key = os.getenv('JWT_SECRET_KEY', 'default-secret-key-change-in-production')
+        payload = jwt.decode(token.credentials, secret_key, algorithms=["HS256"])
         return payload
     except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")

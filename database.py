@@ -11,9 +11,20 @@ import time
 # Create a lock for database operations to prevent concurrent access
 _db_lock = threading.Lock()
 
+from database_pool import db_pool
+
+
 def get_db_connection():
     """Get a database connection with timeout"""
-    return sqlite3.connect('finance.db', timeout=10)
+    # Return a connection from the pool
+    conn = sqlite3.connect('finance.db', timeout=10)
+    return conn
+
+
+def get_db_connection_pooled():
+    """Get a database connection from the pool"""
+    from database_pool import db_pool
+    return db_pool.get_connection()
 
 
 def init_db():
@@ -176,13 +187,104 @@ def add_transaction(date, description, category, amount, trans_type):
     conn.close()
 
 
-def get_transactions():
-    """Retrieve all transactions from the database."""
+def get_transactions(page=1, page_size=50):
+    """Retrieve all transactions from the database with pagination."""
+    offset = (page - 1) * page_size
     with _db_lock:
         conn = sqlite3.connect('finance.db', timeout=10)
-        df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC", conn)
+        df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC LIMIT ? OFFSET ?", conn, params=(page_size, offset))
         conn.close()
     return df
+
+
+def get_transaction_count():
+    """Get the total count of transactions in the database."""
+    with _db_lock:
+        conn = sqlite3.connect('finance.db', timeout=10)
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM transactions')
+        count = cursor.fetchone()[0]
+        conn.close()
+    return count
+
+
+def search_transactions(query=None, start_date=None, end_date=None, category=None, trans_type=None, page=1, page_size=50):
+    """Search and filter transactions based on various criteria."""
+    offset = (page - 1) * page_size
+    
+    # Build the query and parameters
+    base_query = "SELECT * FROM transactions WHERE 1=1"
+    params = []
+    
+    # Add search query filter
+    if query:
+        base_query += " AND (description LIKE ? OR category LIKE ?)"
+        params.extend([f'%{query}%', f'%{query}%'])
+    
+    # Add date range filter
+    if start_date:
+        base_query += " AND date >= ?"
+        params.append(str(start_date))
+    if end_date:
+        base_query += " AND date <= ?"
+        params.append(str(end_date))
+    
+    # Add category filter
+    if category and category != 'All':
+        base_query += " AND category = ?"
+        params.append(category)
+    
+    # Add type filter
+    if trans_type and trans_type != 'All':
+        base_query += " AND type = ?"
+        params.append(trans_type)
+    
+    # Order by date descending
+    base_query += " ORDER BY date DESC LIMIT ? OFFSET ?"
+    params.extend([page_size, offset])
+    
+    with _db_lock:
+        conn = sqlite3.connect('finance.db', timeout=10)
+        df = pd.read_sql_query(base_query, conn, params=params)
+        conn.close()
+    return df
+
+
+def get_transaction_count_filtered(query=None, start_date=None, end_date=None, category=None, trans_type=None):
+    """Get the count of transactions matching the filter criteria."""
+    base_query = "SELECT COUNT(*) FROM transactions WHERE 1=1"
+    params = []
+    
+    # Add search query filter
+    if query:
+        base_query += " AND (description LIKE ? OR category LIKE ?)"
+        params.extend([f'%{query}%', f'%{query}%'])
+    
+    # Add date range filter
+    if start_date:
+        base_query += " AND date >= ?"
+        params.append(str(start_date))
+    if end_date:
+        base_query += " AND date <= ?"
+        params.append(str(end_date))
+    
+    # Add category filter
+    if category and category != 'All':
+        base_query += " AND category = ?"
+        params.append(category)
+    
+    # Add type filter
+    if trans_type and trans_type != 'All':
+        base_query += " AND type = ?"
+        params.append(trans_type)
+    
+    with _db_lock:
+        conn = sqlite3.connect('finance.db', timeout=10)
+        cursor = conn.cursor()
+        cursor.execute(base_query, params)
+        count = cursor.fetchone()[0]
+        conn.close()
+    return count
 
 
 def update_transaction(trans_id, date, description, category, amount, trans_type):

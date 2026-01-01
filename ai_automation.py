@@ -4,22 +4,41 @@ AI automation module for OCR and anomaly detection
 import pytesseract
 from PIL import Image
 import pandas as pd
-from sklearn.ensemble import IsolationForest
+from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
 import numpy as np
 import re
+import cv2
 
 class AIProcessor:
     def __init__(self):
-        self.anomaly_detector = IsolationForest(contamination=0.1)
-        self.category_classifier = MultinomialNB()
+        self.anomaly_detector = IsolationForest(contamination=0.1, random_state=42)
+        # Use pipeline for better category classification
+        self.category_classifier = Pipeline([
+            ('tfidf', TfidfVectorizer(ngram_range=(1, 2), max_features=10000)),
+            ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
+        ])
         self.is_trained = False
     
+    def preprocess_image(self, image_path):
+        """Enhanced image preprocessing for better OCR"""
+        image = cv2.imread(image_path)
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Apply Gaussian blur to reduce noise
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        # Apply threshold to get a binary image
+        _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        return thresh
+    
     def extract_text_from_receipt(self, image_path):
-        """Extract text from receipt image using OCR"""
-        image = Image.open(image_path)
-        text = pytesseract.image_to_string(image)
+        """Enhanced OCR with preprocessing"""
+        processed_image = self.preprocess_image(image_path)
+        # Convert back to PIL format for pytesseract
+        pil_image = Image.fromarray(processed_image)
+        text = pytesseract.image_to_string(pil_image, config='--oem 3 --psm 6')
         return text
     
     def extract_financial_data(self, receipt_text):
@@ -44,14 +63,22 @@ class AIProcessor:
         }
     
     def detect_anomalies(self, transactions_df):
-        """Detect anomalous transactions using Isolation Forest"""
-        # Prepare features for anomaly detection
-        features = transactions_df[['amount']].values
+        """Enhanced anomaly detection with multiple features"""
+        if transactions_df.empty:
+            return []
+        
+        # Use multiple features for better anomaly detection
+        features = transactions_df[['amount']].copy()
+        
+        # Add time-based features
+        if 'date' in transactions_df.columns:
+            dates = pd.to_datetime(transactions_df['date'])
+            features['day_of_week'] = dates.dt.dayofweek
+            features['day_of_month'] = dates.dt.day
+            features['month'] = dates.dt.month
         
         # Fit and predict anomalies
-        if not hasattr(self.anomaly_detector, 'estimators_'):
-            self.anomaly_detector.fit(features)
-        
+        self.anomaly_detector.fit(features)
         anomalies = self.anomaly_detector.predict(features)
         anomaly_indices = np.where(anomalies == -1)[0]
         

@@ -2,12 +2,19 @@
 Security module for encryption and authentication
 """
 from cryptography.fernet import Fernet
+import os
 import bcrypt
 import secrets
 
 class SecurityManager:
     def __init__(self):
-        self.key = Fernet.generate_key()
+        # Use environment variable for key or generate new one
+        key_env = os.getenv('FERNET_KEY')
+        if key_env:
+            self.key = key_env.encode()
+        else:
+            self.key = Fernet.generate_key()
+            # In production, you should save this key securely
         self.cipher = Fernet(self.key)
     
     def encrypt_sensitive_data(self, data):
