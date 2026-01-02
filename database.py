@@ -1,12 +1,24 @@
 """
 Database module for the financial dashboard application.
-Handles all SQLite database operations for transactions, employees, and budgets.
+Handles database operations for transactions, employees, and budgets.
+Supports both SQLite (development) and PostgreSQL (production).
 """
 
+import os
 import sqlite3
 import pandas as pd
 import threading
 import time
+
+# Import psycopg2 only if needed for PostgreSQL
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    HAS_POSTGRES = True
+except ImportError:
+    psycopg2 = None
+    RealDictCursor = None
+    HAS_POSTGRES = False
 
 # Create a lock for database operations to prevent concurrent access
 _db_lock = threading.Lock()
@@ -15,10 +27,29 @@ from database_pool import db_pool
 
 
 def get_db_connection():
-    """Get a database connection with timeout"""
-    # Return a connection from the pool
-    conn = sqlite3.connect('finance.db', timeout=10)
-    return conn
+    """Get a database connection based on environment (SQLite for dev, PostgreSQL for prod)"""
+    # Check environment variable to determine database type
+    db_type = os.getenv('DB_TYPE', 'sqlite').lower()
+    
+    if db_type == 'postgresql' and HAS_POSTGRES:
+        # PostgreSQL connection
+        conn = psycopg2.connect(
+            host=os.getenv('DB_HOST', 'localhost'),
+            database=os.getenv('DB_NAME', 'algohub'),
+            user=os.getenv('DB_USER', 'user'),
+            password=os.getenv('DB_PASSWORD', 'password'),
+            cursor_factory=RealDictCursor
+        )
+        return conn
+    elif db_type == 'postgresql' and not HAS_POSTGRES:
+        # Fallback to SQLite if PostgreSQL is requested but not available
+        print("Warning: PostgreSQL requested but psycopg2 not installed. Using SQLite instead.")
+        conn = sqlite3.connect('finance.db', timeout=10)
+        return conn
+    else:
+        # SQLite connection (default)
+        conn = sqlite3.connect('finance.db', timeout=10)
+        return conn
 
 
 def get_db_connection_pooled():
@@ -28,148 +59,279 @@ def get_db_connection_pooled():
 
 
 def init_db():
-    """Initialize the database with required tables."""
+    """Initialize the database with required tables based on database type."""
     with _db_lock:
-        conn = sqlite3.connect('finance.db', timeout=10)
+        conn = get_db_connection()
         cursor = conn.cursor()
-    
-    # Create currencies table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS currencies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT UNIQUE NOT NULL,
-            name TEXT NOT NULL,
-            symbol TEXT,
-            is_active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Insert default currency if not exists
-    cursor.execute("INSERT OR IGNORE INTO currencies (code, name, symbol, is_active) VALUES ('PKR', 'Pakistani Rupee', 'Rs', 1)")
-    
-    # Create transactions table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            description TEXT NOT NULL,
-            category TEXT NOT NULL,
-            amount REAL NOT NULL,
-            type TEXT NOT NULL CHECK(type IN ('Income', 'Expense', 'Salary', 'Investment', 'Loan')),
-            currency_code TEXT DEFAULT 'PKR',
-            base_currency_amount REAL,
-            exchange_rate REAL
-        )
-    ''')
-    
-    # Create audit_logs table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS audit_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entity_type TEXT NOT NULL,
-            entity_id INTEGER NOT NULL,
-            action TEXT NOT NULL,
-            old_values TEXT,
-            new_values TEXT,
-            user_id INTEGER,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            ip_address TEXT,
-            session_id TEXT,
-            hash_value TEXT NOT NULL
-        )
-    ''')
-    
-    # Create bank_accounts table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS bank_accounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            account_number TEXT,
-            bank_name TEXT NOT NULL,
-            currency_code TEXT DEFAULT 'PKR',
-            is_active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create bank_transactions table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS bank_transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            bank_account_id INTEGER,
-            external_transaction_id TEXT,
-            date TEXT NOT NULL,
-            description TEXT NOT NULL,
-            amount REAL NOT NULL,
-            currency_code TEXT DEFAULT 'PKR',
-            status TEXT DEFAULT 'pending',
-            matched_transaction_id INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id),
-            FOREIGN KEY (matched_transaction_id) REFERENCES transactions(id)
-        )
-    ''')
-    
-    # Create investments table (for investments in the company)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS company_investments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            investor_name TEXT NOT NULL,
-            investment_type TEXT NOT NULL,
-            investment_date TEXT NOT NULL,
-            amount REAL NOT NULL,
-            equity_percentage REAL,
-            status TEXT NOT NULL DEFAULT 'Active'
-        )
-    ''')
-    
-    # Create loans table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS loans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            lender_name TEXT NOT NULL,
-            loan_type TEXT NOT NULL,
-            loan_date TEXT NOT NULL,
-            principal_amount REAL NOT NULL,
-            interest_rate REAL NOT NULL,
-            monthly_payment REAL NOT NULL,
-            total_payments INTEGER NOT NULL,
-            remaining_payments INTEGER NOT NULL,
-            status TEXT NOT NULL DEFAULT 'Active'
-        )
-    ''')
-    
-    # Check if loan_direction column exists, if not, add it
-    cursor.execute("PRAGMA table_info(loans)")
-    columns = [column[1] for column in cursor.fetchall()]
-    if 'loan_direction' not in columns:
-        cursor.execute("ALTER TABLE loans ADD COLUMN loan_direction TEXT NOT NULL DEFAULT 'Inbound'")
-    
-    # Create employees table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS employees (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            department TEXT NOT NULL,
-            base_salary REAL NOT NULL,
-            tax_rate REAL NOT NULL,
-            deductions REAL NOT NULL
-        )
-    ''')
-    
-    # Create budgets table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS budgets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT NOT NULL UNIQUE,
-            monthly_budget REAL NOT NULL,
-            actual_spent REAL DEFAULT 0
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+        
+        # Check if this is a PostgreSQL connection
+        is_postgresql = HAS_POSTGRES and isinstance(conn, psycopg2.extensions.connection)
+        
+        # Create currencies table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS currencies (
+                    id SERIAL PRIMARY KEY,
+                    code VARCHAR(3) UNIQUE NOT NULL,
+                    name VARCHAR(50) NOT NULL,
+                    symbol VARCHAR(5),
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            # Insert default currency if not exists
+            cursor.execute("INSERT INTO currencies (code, name, symbol, is_active) VALUES ('PKR', 'Pakistani Rupee', 'Rs', TRUE) ON CONFLICT (code) DO NOTHING")
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS currencies (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    symbol TEXT,
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            # Insert default currency if not exists
+            cursor.execute("INSERT OR IGNORE INTO currencies (code, name, symbol, is_active) VALUES ('PKR', 'Pakistani Rupee', 'Rs', 1)")
+        
+        # Create transactions table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id SERIAL PRIMARY KEY,
+                    date DATE NOT NULL,
+                    description TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    amount DECIMAL(15,2) NOT NULL,
+                    type VARCHAR(20) NOT NULL CHECK(type IN ('Income', 'Expense', 'Salary', 'Investment', 'Loan')),
+                    currency_code VARCHAR(3) DEFAULT 'PKR',
+                    base_currency_amount DECIMAL(15,2),
+                    exchange_rate DECIMAL(10,6)
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    type TEXT NOT NULL CHECK(type IN ('Income', 'Expense', 'Salary', 'Investment', 'Loan')),
+                    currency_code TEXT DEFAULT 'PKR',
+                    base_currency_amount REAL,
+                    exchange_rate REAL
+                )
+            ''')
+        
+        # Create audit_logs table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS audit_logs (
+                    id SERIAL PRIMARY KEY,
+                    entity_type VARCHAR(50) NOT NULL,
+                    entity_id INTEGER NOT NULL,
+                    action VARCHAR(20) NOT NULL,
+                    old_values JSONB,
+                    new_values JSONB,
+                    user_id INTEGER,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    ip_address INET,
+                    session_id VARCHAR(100),
+                    hash_value VARCHAR(64) NOT NULL
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS audit_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    entity_type TEXT NOT NULL,
+                    entity_id INTEGER NOT NULL,
+                    action TEXT NOT NULL,
+                    old_values TEXT,
+                    new_values TEXT,
+                    user_id INTEGER,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    ip_address TEXT,
+                    session_id TEXT,
+                    hash_value TEXT NOT NULL
+                )
+            ''')
+        
+        # Create bank_accounts table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS bank_accounts (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL,
+                    account_number VARCHAR(50),
+                    bank_name VARCHAR(100) NOT NULL,
+                    currency_code VARCHAR(3) DEFAULT 'PKR',
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS bank_accounts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    account_number TEXT,
+                    bank_name TEXT NOT NULL,
+                    currency_code TEXT DEFAULT 'PKR',
+                    is_active BOOLEAN DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        
+        # Create bank_transactions table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS bank_transactions (
+                    id SERIAL PRIMARY KEY,
+                    bank_account_id INTEGER,
+                    external_transaction_id VARCHAR(100),
+                    date DATE NOT NULL,
+                    description TEXT NOT NULL,
+                    amount DECIMAL(15,2) NOT NULL,
+                    currency_code VARCHAR(3) DEFAULT 'PKR',
+                    status VARCHAR(20) DEFAULT 'pending',
+                    matched_transaction_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id),
+                    FOREIGN KEY (matched_transaction_id) REFERENCES transactions(id)
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS bank_transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    bank_account_id INTEGER,
+                    external_transaction_id TEXT,
+                    date TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    currency_code TEXT DEFAULT 'PKR',
+                    status TEXT DEFAULT 'pending',
+                    matched_transaction_id INTEGER,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id),
+                    FOREIGN KEY (matched_transaction_id) REFERENCES transactions(id)
+                )
+            ''')
+        
+        # Create investments table (for investments in the company)
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS company_investments (
+                    id SERIAL PRIMARY KEY,
+                    investor_name TEXT NOT NULL,
+                    investment_type TEXT NOT NULL,
+                    investment_date DATE NOT NULL,
+                    amount DECIMAL(15,2) NOT NULL,
+                    equity_percentage DECIMAL(5,2),
+                    status VARCHAR(20) NOT NULL DEFAULT 'Active'
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS company_investments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    investor_name TEXT NOT NULL,
+                    investment_type TEXT NOT NULL,
+                    investment_date TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    equity_percentage REAL,
+                    status TEXT NOT NULL DEFAULT 'Active'
+                )
+            ''')
+        
+        # Create loans table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS loans (
+                    id SERIAL PRIMARY KEY,
+                    lender_name TEXT NOT NULL,
+                    loan_type TEXT NOT NULL,
+                    loan_date DATE NOT NULL,
+                    principal_amount DECIMAL(15,2) NOT NULL,
+                    interest_rate DECIMAL(5,4) NOT NULL,
+                    monthly_payment DECIMAL(15,2) NOT NULL,
+                    total_payments INTEGER NOT NULL,
+                    remaining_payments INTEGER NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'Active',
+                    loan_direction VARCHAR(10) NOT NULL DEFAULT 'Inbound'
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS loans (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    lender_name TEXT NOT NULL,
+                    loan_type TEXT NOT NULL,
+                    loan_date TEXT NOT NULL,
+                    principal_amount REAL NOT NULL,
+                    interest_rate REAL NOT NULL,
+                    monthly_payment REAL NOT NULL,
+                    total_payments INTEGER NOT NULL,
+                    remaining_payments INTEGER NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'Active'
+                )
+            ''')
+            
+            # Check if loan_direction column exists, if not, add it
+            cursor.execute("PRAGMA table_info(loans)")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'loan_direction' not in columns:
+                cursor.execute("ALTER TABLE loans ADD COLUMN loan_direction TEXT NOT NULL DEFAULT 'Inbound'")
+        
+        # Create employees table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS employees (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    base_salary DECIMAL(10,2) NOT NULL,
+                    tax_rate DECIMAL(5,4) NOT NULL,
+                    deductions DECIMAL(10,2) NOT NULL
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS employees (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    department TEXT NOT NULL,
+                    base_salary REAL NOT NULL,
+                    tax_rate REAL NOT NULL,
+                    deductions REAL NOT NULL
+                )
+            ''')
+        
+        # Create budgets table
+        if is_postgresql:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS budgets (
+                    id SERIAL PRIMARY KEY,
+                    category TEXT NOT NULL UNIQUE,
+                    monthly_budget DECIMAL(10,2) NOT NULL,
+                    actual_spent DECIMAL(10,2) DEFAULT 0
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS budgets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category TEXT NOT NULL UNIQUE,
+                    monthly_budget REAL NOT NULL,
+                    actual_spent REAL DEFAULT 0
+                )
+            ''')
+        
+        conn.commit()
+        conn.close()
 
 
 def add_transaction(date, description, category, amount, trans_type):
@@ -190,9 +352,16 @@ def add_transaction(date, description, category, amount, trans_type):
 def get_transactions(page=1, page_size=50):
     """Retrieve all transactions from the database with pagination."""
     offset = (page - 1) * page_size
+    
+    # Check if this is a PostgreSQL connection
+    conn = get_db_connection()
+    is_postgresql = HAS_POSTGRES and isinstance(conn, psycopg2.extensions.connection)
+    
     with _db_lock:
-        conn = sqlite3.connect('finance.db', timeout=10)
-        df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC LIMIT ? OFFSET ?", conn, params=(page_size, offset))
+        if is_postgresql:
+            df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC LIMIT %s OFFSET %s", conn, params=(page_size, offset))
+        else:
+            df = pd.read_sql_query("SELECT * FROM transactions ORDER BY date DESC LIMIT ? OFFSET ?", conn, params=(page_size, offset))
         conn.close()
     return df
 
@@ -451,35 +620,39 @@ def update_actual_spent():
 
 
 def get_financial_summary():
-    """Get financial summary data for dashboard."""
+    """Get financial summary data for dashboard with separate revenue and invested money."""
     with _db_lock:
         conn = sqlite3.connect('finance.db', timeout=10)
     
-    # Calculate total revenue (Income + Company Investments + Inbound Loans)
+    # Calculate total revenue (only from business activities - Income transactions)
     revenue_df = pd.read_sql_query("""
         SELECT SUM(amount) as total_revenue 
         FROM transactions 
         WHERE type IN ('Income')
     """, conn)
     
+    # Calculate total invested money (from investors in the company)
     investment_df = pd.read_sql_query("""
-        SELECT SUM(amount) as total_investments 
+        SELECT SUM(amount) as total_invested_money 
         FROM company_investments
+        WHERE status = 'Active'
     """, conn)
     
-    # Get inbound loans (loans received by company) as part of revenue
+    # Get inbound loans (loans received by company) - separate from revenue
     inbound_loans_df = pd.read_sql_query("""
         SELECT SUM(principal_amount) as total_inbound_loans
         FROM loans
         WHERE loan_direction = 'Inbound'
     """, conn)
     
-    total_revenue = revenue_df['total_revenue'].iloc[0] if not revenue_df.empty and revenue_df['total_revenue'].iloc[0] else 0
-    total_investments = investment_df['total_investments'].iloc[0] if not investment_df.empty and investment_df['total_investments'].iloc[0] else 0
-    total_inbound_loans = inbound_loans_df['total_inbound_loans'].iloc[0] if not inbound_loans_df.empty and inbound_loans_df['total_inbound_loans'].iloc[0] else 0
+    # Calculate total business revenue (only from income transactions)
+    total_revenue = revenue_df['total_revenue'].iloc[0] if not revenue_df.empty and pd.notna(revenue_df['total_revenue'].iloc[0]) else 0
     
-    total_revenue += total_investments  # Include company investments in total revenue
-    total_revenue += total_inbound_loans  # Include inbound loans as revenue
+    # Calculate total money invested in the company by investors
+    total_invested_money = investment_df['total_invested_money'].iloc[0] if not investment_df.empty and pd.notna(investment_df['total_invested_money'].iloc[0]) else 0
+    
+    # Calculate total inbound loans (money received as loans)
+    total_inbound_loans = inbound_loans_df['total_inbound_loans'].iloc[0] if not inbound_loans_df.empty and pd.notna(inbound_loans_df['total_inbound_loans'].iloc[0]) else 0
     
     # Calculate total expenses (Expense + Salary)
     expenses_df = pd.read_sql_query("""
@@ -488,28 +661,30 @@ def get_financial_summary():
         WHERE type IN ('Expense', 'Salary')
     """, conn)
     
-    total_expenses = expenses_df['total_expenses'].iloc[0] if not expenses_df.empty and expenses_df['total_expenses'].iloc[0] else 0
+    total_expenses = expenses_df['total_expenses'].iloc[0] if not expenses_df.empty and pd.notna(expenses_df['total_expenses'].iloc[0]) else 0
     
-    # Calculate net profit
+    # Calculate net profit (only from business revenue minus expenses)
     net_profit = total_revenue - total_expenses
     
-    # Calculate current cash balance
+    # Calculate current cash balance (revenue + investments + loans - expenses)
     cash_balance_df = pd.read_sql_query("""
         SELECT 
-            (SELECT SUM(amount) FROM transactions WHERE type IN ('Income')) +
-            (SELECT SUM(amount) FROM company_investments) +
-            (SELECT SUM(principal_amount) FROM loans WHERE loan_direction = 'Inbound') -
-            (SELECT SUM(amount) FROM transactions WHERE type IN ('Expense', 'Salary')) as cash_balance
+            (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type IN ('Income')) +
+            (SELECT COALESCE(SUM(amount), 0) FROM company_investments WHERE status = 'Active') +
+            (SELECT COALESCE(SUM(principal_amount), 0) FROM loans WHERE loan_direction = 'Inbound') -
+            (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type IN ('Expense', 'Salary')) as cash_balance
     """, conn)
     
-    cash_balance = cash_balance_df['cash_balance'].iloc[0] if not cash_balance_df.empty and cash_balance_df['cash_balance'].iloc[0] else 0
+    cash_balance = cash_balance_df['cash_balance'].iloc[0] if not cash_balance_df.empty and pd.notna(cash_balance_df['cash_balance'].iloc[0]) else 0
     
     conn.close()
     
     return {
-        'total_revenue': total_revenue,
+        'total_revenue': total_revenue,  # Money made from business activities
+        'total_invested_money': total_invested_money,  # Money invested by investors
+        'total_inbound_loans': total_inbound_loans,  # Money received as loans
         'total_expenses': total_expenses,
-        'net_profit': net_profit,
+        'net_profit': net_profit,  # Profit from business operations
         'cash_balance': cash_balance
     }
 

@@ -40,6 +40,17 @@ def run_streamlit():
     """Run the Streamlit app in a separate thread"""
     subprocess.run([sys.executable, "-m", "streamlit", "run", "app.py", "--server.port", "8502"])
 
+
+def start_scheduled_backups():
+    """Start the scheduled backup system"""
+    try:
+        from scheduled_backup import start_scheduler
+        start_scheduler()
+    except ImportError:
+        print("Scheduled backup module not found")
+    except Exception as e:
+        print(f"Error starting scheduled backups: {str(e)}")
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
@@ -47,6 +58,9 @@ if __name__ == "__main__":
     parser.add_argument("--host", default="0.0.0.0", help="Host to run the API on")
     parser.add_argument("--streamlit", action="store_true", help="Also run the Streamlit app")
     args = parser.parse_args()
+    
+    # Start scheduled backups
+    start_scheduled_backups()
     
     if args.streamlit:
         # Run Streamlit in a separate thread

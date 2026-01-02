@@ -1,0 +1,105 @@
+2026-01-02 04:55:37,743 - advanced_reporting - ERROR - cash_flow_forecasting:110 - Error in cash flow forecasting: Prefix not defined
+Traceback (most recent call last):
+  File "D:\ALGO-HUB\AUDIT\advanced_reporting.py", line 96, in cash_flow_forecasting
+    next_month = last_month + pd.offsets.MonthEnd(0) + pd.DateOffset(months=i)
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+  File "pandas/_libs/tslibs/period.pyx", line 1847, in pandas._libs.tslibs.period._Period.__add__
+  File "pandas/_libs/tslibs/period.pyx", line 1837, in pandas._libs.tslibs.period._Period._add_offset
+  File "pandas/_libs/tslibs/period.pyx", line 1726, in pandas._libs.tslibs.period.PeriodMixin._require_matching_freq
+  File "pandas/_libs/tslibs/offsets.pyx", line 564, in pandas._libs.tslibs.offsets.BaseOffset.name.__get__
+  File "pandas/_libs/tslibs/offsets.pyx", line 572, in pandas._libs.tslibs.offsets.BaseOffset.rule_code.__get__
+  File "pandas/_libs/tslibs/offsets.pyx", line 568, in pandas._libs.tslibs.offsets.BaseOffset._prefix.__get__
+NotImplementedError: Prefix not defined
+
+2026-01-02 04:55:37,747 - advanced_reporting - ERROR - wrapper:85 - cash_flow_forecasting failed after 0.0563s: Prefix not defined
+Traceback (most recent call last):
+  File "D:\ALGO-HUB\AUDIT\monitoring.py", line 78, in wrapper
+    result = func(*args, **kwargs)
+  File "D:\ALGO-HUB\AUDIT\advanced_reporting.py", line 111, in cash_flow_forecasting
+    raise e
+  File "D:\ALGO-HUB\AUDIT\advanced_reporting.py", line 96, in cash_flow_forecasting
+    next_month = last_month + pd.offsets.MonthEnd(0) + pd.DateOffset(months=i)
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+  File "pandas/_libs/tslibs/period.pyx", line 1847, in pandas._libs.tslibs.period._Period.__add__
+  File "pandas/_libs/tslibs/period.pyx", line 1837, in pandas._libs.tslibs.period._Period._add_offset
+  File "pandas/_libs/tslibs/period.pyx", line 1726, in pandas._libs.tslibs.period.PeriodMixin._require_matching_freq
+  File "pandas/_libs/tslibs/offsets.pyx", line 564, in pandas._libs.tslibs.offsets.BaseOffset.name.__get__
+  File "pandas/_libs/tslibs/offsets.pyx", line 572, in pandas._libs.tslibs.offsets.BaseOffset.rule_code.__get__
+  File "pandas/_libs/tslibs/offsets.pyx", line 568, in pandas._libs.tslibs.offsets.BaseOffset._prefix.__get__
+NotImplementedError: Prefix not defined
+
+2026-01-02 04:55:37,849 - caching - INFO - add_job:456 - Added job ea00ad78-189b-4505-8264-af2d3b9c6927 of type test_job to queue
+2026-01-02 04:55:37,850 - caching - INFO - worker:327 - Processing background job ea00ad78-189b-4505-8264-af2d3b9c6927: test_job
+2026-01-02 04:55:37,850 - caching - ERROR - worker:350 - Unknown job type: test_job
+2026-01-02 04:55:37,851 - caching - ERROR - worker:361 - Job ea00ad78-189b-4505-8264-af2d3b9c6927 failed
+2026-01-02 04:56:08,581 - advanced_reporting - INFO - cash_flow_forecasting:109 - Generated cash flow forecast for 3 months ahead
+2026-01-02 04:56:08,582 - advanced_reporting - INFO - wrapper:81 - cash_flow_forecasting executed in 0.0332s
+2026-01-02 04:56:08,651 - advanced_reporting - INFO - budget_variance_analysis:136 - Found 1 budget categories with significant variance
+2026-01-02 04:56:08,652 - advanced_reporting - INFO - wrapper:81 - budget_variance_analysis executed in 0.0049s
+2026-01-02 04:56:08,719 - advanced_reporting - INFO - financial_ratios_analysis:180 - Calculated financial ratios
+2026-01-02 04:56:08,720 - advanced_reporting - INFO - wrapper:81 - financial_ratios_analysis executed in 0.0133s
+2026-01-02 04:56:08,825 - caching - INFO - add_job:456 - Added job 76410b31-a833-4205-bcd1-5258a1166613 of type test_job to queue
+2026-01-02 04:56:08,825 - caching - INFO - worker:327 - Processing background job 76410b31-a833-4205-bcd1-5258a1166613: test_job
+2026-01-02 04:56:08,826 - caching - ERROR - worker:350 - Unknown job type: test_job
+2026-01-02 04:56:08,827 - caching - ERROR - worker:361 - Job 76410b31-a833-4205-bcd1-5258a1166613 failed
+2026-01-02 04:56:57,146 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 04:56:57,147 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 04:56:57,151 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 06:27:00,117 - advanced_reporting - INFO - cash_flow_forecasting:109 - Generated cash flow forecast for 3 months ahead
+2026-01-02 06:27:00,118 - advanced_reporting - INFO - wrapper:81 - cash_flow_forecasting executed in 0.1505s
+2026-01-02 06:27:00,223 - advanced_reporting - INFO - budget_variance_analysis:136 - Found 1 budget categories with significant variance
+2026-01-02 06:27:00,225 - advanced_reporting - INFO - wrapper:81 - budget_variance_analysis executed in 0.0103s
+2026-01-02 06:27:00,348 - advanced_reporting - INFO - financial_ratios_analysis:180 - Calculated financial ratios
+2026-01-02 06:27:00,349 - advanced_reporting - INFO - wrapper:81 - financial_ratios_analysis executed in 0.0208s
+2026-01-02 06:27:00,682 - caching - INFO - add_job:456 - Added job f471e656-188d-4044-a54d-6dbb583a0a28 of type test_job to queue
+2026-01-02 06:27:00,682 - caching - INFO - worker:327 - Processing background job f471e656-188d-4044-a54d-6dbb583a0a28: test_job
+2026-01-02 06:27:00,687 - caching - ERROR - worker:350 - Unknown job type: test_job
+2026-01-02 06:27:00,688 - caching - ERROR - worker:361 - Job f471e656-188d-4044-a54d-6dbb583a0a28 failed
+2026-01-02 06:57:04,862 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 06:57:04,874 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 06:57:04,880 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 07:02:45,626 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 07:02:45,629 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 07:02:45,633 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 07:03:22,168 - advanced_reporting - INFO - cash_flow_forecasting:109 - Generated cash flow forecast for 3 months ahead
+2026-01-02 07:03:22,169 - advanced_reporting - INFO - wrapper:81 - cash_flow_forecasting executed in 0.0526s
+2026-01-02 07:03:22,228 - advanced_reporting - INFO - budget_variance_analysis:136 - Found 1 budget categories with significant variance
+2026-01-02 07:03:22,228 - advanced_reporting - INFO - wrapper:81 - budget_variance_analysis executed in 0.0040s
+2026-01-02 07:03:22,299 - advanced_reporting - INFO - financial_ratios_analysis:180 - Calculated financial ratios
+2026-01-02 07:03:22,300 - advanced_reporting - INFO - wrapper:81 - financial_ratios_analysis executed in 0.0095s
+2026-01-02 07:03:22,423 - caching - INFO - add_job:456 - Added job eb44045d-aecd-4713-a36c-527a246ae8ae of type test_job to queue
+2026-01-02 07:03:22,423 - caching - INFO - worker:327 - Processing background job eb44045d-aecd-4713-a36c-527a246ae8ae: test_job
+2026-01-02 07:03:22,424 - caching - ERROR - worker:350 - Unknown job type: test_job
+2026-01-02 07:03:22,424 - caching - ERROR - worker:361 - Job eb44045d-aecd-4713-a36c-527a246ae8ae failed
+2026-01-02 07:13:01,352 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 07:13:01,367 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 07:13:01,394 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 07:14:22,423 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 07:14:22,424 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 07:14:22,427 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 07:16:21,577 - advanced_reporting - INFO - cash_flow_forecasting:109 - Generated cash flow forecast for 3 months ahead
+2026-01-02 07:16:21,581 - advanced_reporting - INFO - wrapper:81 - cash_flow_forecasting executed in 0.1649s
+2026-01-02 07:16:21,691 - advanced_reporting - INFO - budget_variance_analysis:136 - Found 1 budget categories with significant variance
+2026-01-02 07:16:21,696 - advanced_reporting - INFO - wrapper:81 - budget_variance_analysis executed in 0.0143s
+2026-01-02 07:16:21,837 - advanced_reporting - INFO - financial_ratios_analysis:180 - Calculated financial ratios
+2026-01-02 07:16:21,838 - advanced_reporting - INFO - wrapper:81 - financial_ratios_analysis executed in 0.0350s
+2026-01-02 07:16:22,238 - caching - INFO - add_job:456 - Added job 1d05e0b4-7eca-43bb-992c-052c050d9280 of type test_job to queue
+2026-01-02 07:16:22,238 - caching - INFO - worker:327 - Processing background job 1d05e0b4-7eca-43bb-992c-052c050d9280: test_job
+2026-01-02 07:16:22,241 - caching - ERROR - worker:350 - Unknown job type: test_job
+2026-01-02 07:16:22,244 - caching - ERROR - worker:361 - Job 1d05e0b4-7eca-43bb-992c-052c050d9280 failed
+2026-01-02 07:16:50,060 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 07:16:50,062 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 07:16:50,065 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 07:24:53,780 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 07:24:53,782 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 07:24:53,786 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 07:26:07,317 - advanced_reporting - INFO - cash_flow_forecasting:109 - Generated cash flow forecast for 3 months ahead
+2026-01-02 07:26:07,318 - advanced_reporting - INFO - wrapper:81 - cash_flow_forecasting executed in 0.0261s
+2026-01-02 07:26:07,364 - advanced_reporting - INFO - budget_variance_analysis:136 - Found 1 budget categories with significant variance
+2026-01-02 07:26:07,365 - advanced_reporting - INFO - wrapper:81 - budget_variance_analysis executed in 0.0052s
+2026-01-02 07:26:07,407 - advanced_reporting - INFO - financial_ratios_analysis:180 - Calculated financial ratios
+2026-01-02 07:26:07,408 - advanced_reporting - INFO - wrapper:81 - financial_ratios_analysis executed in 0.0082s
+2026-01-02 07:26:07,505 - caching - INFO - add_job:456 - Added job e2b8a19d-0046-44cc-b558-b79e12964dc9 of type test_job to queue
+2026-01-02 07:26:07,506 - caching - INFO - worker:327 - Processing background job e2b8a19d-0046-44cc-b558-b79e12964dc9: test_job
+2026-01-02 07:26:07,507 - caching - ERROR - worker:350 - Unknown job type: test_job
+2026-01-02 07:26:07,507 - caching - ERROR - worker:361 - Job e2b8a19d-0046-44cc-b558-b79e12964dc9 failed

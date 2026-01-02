@@ -6,9 +6,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/algohub
+      - DB_TYPE=postgresql
+      - DB_HOST=db
+      - DB_NAME=algohub
+      - DB_USER=user
+      - DB_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
       - FERNET_KEY=${FERNET_KEY}
     depends_on:
       - db

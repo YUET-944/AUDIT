@@ -366,7 +366,8 @@ class UserManagement:
                     "role": user[3],
                     "created_at": user[4],
                     "last_login": user[5],
-                    "is_active": user[6]
+                    "is_active": user[6],
+                    "permissions": get_user_permissions(user[3])
                 }
                 for user in users
             ]
@@ -374,20 +375,84 @@ class UserManagement:
         except Exception as e:
             logger.error(f"Error getting all users: {str(e)}\n{traceback.format_exc()}")
             raise e
+    
+    def change_user_password(self, user_id, old_password, new_password):
+        """Change user password after verifying old password"""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Get current password hash
+            cursor.execute('SELECT password_hash FROM users WHERE id = ?', (user_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                raise ValueError(f"User with ID {user_id} not found")
+            
+            current_hash = result[0]
+            
+            # Verify old password
+            if not self.verify_password(old_password, current_hash):
+                raise ValueError("Incorrect old password")
+            
+            # Hash and update new password
+            new_hash = self.hash_password(new_password)
+            cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_hash, user_id))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Password changed for user ID {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Error changing password for user {user_id}: {str(e)}\n{traceback.format_exc()}")
+            raise e
+    
+    def reset_user_password(self, user_id, new_password):
+        """Admin function to reset user password (doesn't require old password)"""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Hash and update new password
+            new_hash = self.hash_password(new_password)
+            cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_hash, user_id))
+            
+            if cursor.rowcount == 0:
+                raise ValueError(f"User with ID {user_id} not found")
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Password reset for user ID {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Error resetting password for user {user_id}: {str(e)}\n{traceback.format_exc()}")
+            raise e
 
 # Role-based access control helper functions
-def has_permission(user_role, required_role):
-    """Check if user has required permission level"""
-    role_hierarchy = {
-        "viewer": 1,
-        "accountant": 2,
-        "admin": 3
+def has_permission(user_role, required_permission):
+    """Check if user has required permission based on role"""
+    # Define permissions for each role
+    role_permissions = {
+        "viewer": ["view_dashboard", "view_reports", "view_transactions"],
+        "accountant": ["view_dashboard", "view_reports", "view_transactions", "add_transactions", "edit_transactions", "view_employees", "view_budgets"],
+        "admin": ["view_dashboard", "view_reports", "view_transactions", "add_transactions", "edit_transactions", "delete_transactions", "manage_users", "view_employees", "add_employees", "edit_employees", "view_budgets", "add_budgets", "edit_budgets", "manage_investments", "manage_loans"]
     }
     
-    user_level = role_hierarchy.get(user_role, 0)
-    required_level = role_hierarchy.get(required_role, 0)
+    permissions = role_permissions.get(user_role, [])
+    return required_permission in permissions
+
+
+def get_user_permissions(user_role):
+    """Get all permissions for a user role"""
+    role_permissions = {
+        "viewer": ["view_dashboard", "view_reports", "view_transactions"],
+        "accountant": ["view_dashboard", "view_reports", "view_transactions", "add_transactions", "edit_transactions", "view_employees", "view_budgets"],
+        "admin": ["view_dashboard", "view_reports", "view_transactions", "add_transactions", "edit_transactions", "delete_transactions", "manage_users", "view_employees", "add_employees", "edit_employees", "view_budgets", "add_budgets", "edit_budgets", "manage_investments", "manage_loans"]
+    }
     
-    return user_level >= required_level
+    return role_permissions.get(user_role, [])
 
 def require_role(required_role):
     """Decorator to require specific role for functions"""

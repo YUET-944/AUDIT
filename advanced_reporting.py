@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from database import get_db_connection, get_transactions, get_investments, get_loans
+from database import get_db_connection, get_transactions, get_investments, get_loans, get_budgets
 from calculations import format_currency
 import logging
 from datetime import datetime, timedelta
@@ -13,8 +13,13 @@ import traceback
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import r2_score
 import warnings
 warnings.filterwarnings('ignore')
+
+# Import caching and monitoring
+from caching import cache_report_data, cache_financial_summary
+from monitoring import log_performance
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,8 @@ class AdvancedReporting:
     def __init__(self):
         self.conn = get_db_connection()
     
+    @cache_report_data(ttl=900)  # Cache for 15 minutes
+    @log_performance
     def cash_flow_forecasting(self, months_ahead=6):
         """Generate cash flow forecast based on historical trends"""
         try:
@@ -86,7 +93,10 @@ class AdvancedReporting:
             last_month = monthly_pivot.index[-1]
             forecast_dates = []
             for i in range(1, months_ahead + 1):
-                next_month = last_month + pd.offsets.MonthEnd(0) + pd.DateOffset(months=i)
+                # Convert period to timestamp, add months, then back to period
+                last_month_ts = last_month.to_timestamp()
+                next_month_ts = last_month_ts + pd.DateOffset(months=i)
+                next_month = next_month_ts.to_period('M')
                 forecast_dates.append(next_month)
             
             forecast_df = pd.DataFrame({
@@ -103,11 +113,12 @@ class AdvancedReporting:
             logger.error(f"Error in cash flow forecasting: {str(e)}\n{traceback.format_exc()}")
             raise e
     
+    @cache_report_data(ttl=900)  # Cache for 15 minutes
+    @log_performance
     def budget_variance_analysis(self, variance_threshold=0.1):
         """Analyze budget vs actual performance with variance reporting"""
         try:
             from calculations import calculate_budget_variance
-            from database import get_budgets
             
             budgets_df = get_budgets()
             if budgets_df.empty:
@@ -129,6 +140,8 @@ class AdvancedReporting:
             logger.error(f"Error in budget variance analysis: {str(e)}\n{traceback.format_exc()}")
             raise e
     
+    @cache_report_data(ttl=900)  # Cache for 15 minutes
+    @log_performance
     def financial_ratios_analysis(self):
         """Calculate key financial ratios"""
         try:
@@ -171,6 +184,8 @@ class AdvancedReporting:
             logger.error(f"Error in financial ratios analysis: {str(e)}\n{traceback.format_exc()}")
             raise e
     
+    @cache_report_data(ttl=900)  # Cache for 15 minutes
+    @log_performance
     def generate_custom_report(self, start_date=None, end_date=None, categories=None, report_type='detailed'):
         """Generate custom report based on specified parameters"""
         try:
@@ -204,6 +219,8 @@ class AdvancedReporting:
             logger.error(f"Error in custom report generation: {str(e)}\n{traceback.format_exc()}")
             raise e
     
+    @cache_report_data(ttl=900)  # Cache for 15 minutes
+    @log_performance
     def trend_analysis(self, comparison_period='year_over_year'):
         """Analyze financial trends with comparative period views"""
         try:
@@ -235,6 +252,8 @@ class AdvancedReporting:
             logger.error(f"Error in trend analysis: {str(e)}\n{traceback.format_exc()}")
             raise e
     
+    @cache_report_data(ttl=900)  # Cache for 15 minutes
+    @log_performance
     def create_visual_report(self, report_type='cash_flow'):
         """Create visual report using Plotly"""
         try:

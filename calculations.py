@@ -193,3 +193,14 @@ def calculate_total_loans(loans_df):
     if loans_df.empty:
         return 0
     return loans_df['principal_amount'].sum()
+
+def format_large_number(amount):
+    """Format large numbers with appropriate suffixes (K, M, B)."""
+    if abs(amount) >= 1_000_000_000:
+        return f"{amount / 1_000_000_000:.1f}B"
+    elif abs(amount) >= 1_000_000:
+        return f"{amount / 1_000_000:.1f}M"
+    elif abs(amount) >= 1_000:
+        return f"{amount / 1_000:.1f}K"
+    else:
+        return f"{amount:.0f}"

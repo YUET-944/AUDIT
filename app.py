@@ -18,7 +18,7 @@ from contextlib import contextmanager
 
 # Import our custom modules
 from database import (
-    init_db, add_transaction, get_transactions, update_transaction, delete_transaction,
+    init_db, get_transactions, update_transaction, delete_transaction,
     add_employee, get_employees, update_employee, delete_employee,
     add_budget, get_budgets, update_budget, delete_budget,
     add_investment, get_investments, update_investment, delete_investment,
@@ -28,12 +28,16 @@ from database import (
     get_expense_by_category, get_payroll_summary, get_salary_by_department,
     check_budget_alerts, get_transaction_count, search_transactions, get_transaction_count_filtered
 )
+
+# Import services from the new architecture
+from infrastructure.dependency_injection import dependency_factory
 from calculations import (
     calculate_net_pay, format_currency, format_percentage, calculate_budget_variance
 )
 from backup_restore import (
     create_database_backup, get_available_backups, restore_from_backup, delete_backup
 )
+from monitoring import log_performance, log_user_activity, log_business_metric
 from datetime import datetime
 
 
@@ -315,6 +319,15 @@ def show_dashboard():
     with col2:
         st.markdown(f"""
         <div class="metric-card">
+            <div class="metric-label">Total Invested Money</div>
+            <div class="metric-value positive">{format_currency(summary['total_invested_money'])}</div>
+            <div style="color: #2ECC71;">↑ 15% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card">
             <div class="metric-label">Net Profit</div>
             <div class="metric-value {'positive' if summary['net_profit'] >= 0 else 'negative'}">
                 {format_currency(summary['net_profit'])}
@@ -323,16 +336,16 @@ def show_dashboard():
         </div>
         """, unsafe_allow_html=True)
     
-    with col3:
+    with col4:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="metric-label">Operating Expenses</div>
-            <div class="metric-value negative">{format_currency(summary['total_expenses'])}</div>
-            <div style="color: #E74C3C;">↑ 5% vs last period</div>
+            <div class="metric-label">Total Loans</div>
+            <div class="metric-value positive">{format_currency(summary['total_inbound_loans'])}</div>
+            <div style="color: #2ECC71;">↑ 5% vs last period</div>
         </div>
         """, unsafe_allow_html=True)
     
-    with col4:
+    with col5:
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-label">Cash Balance</div>
@@ -343,12 +356,104 @@ def show_dashboard():
         </div>
         """, unsafe_allow_html=True)
     
-    with col5:
+    # Add a second row for additional metrics
+    st.markdown("---")
+    col6, col7, col8, col9, col10 = st.columns(5)
+    
+    with col6:
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-label">Outstanding Receivables</div>
             <div class="metric-value positive">PKR 0.00</div>
             <div style="color: #2ECC71;">↓ 100% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col7:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Operating Expenses</div>
+            <div class="metric-value negative">{format_currency(summary['total_expenses'])}</div>
+            <div style="color: #E74C3C;">↑ 5% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col8:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Net Profit Margin</div>
+            <div class="metric-value {'positive' if summary['net_profit'] / summary['total_revenue'] >= 0 else 'negative'}">
+                {format_percentage(summary['net_profit'] / summary['total_revenue'] if summary['total_revenue'] > 0 else 0)}</div>
+            <div style="color: #2ECC71;">↑ 2% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col9:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">ROI</div>
+            <div class="metric-value {'positive' if (summary['total_revenue'] - summary['total_expenses']) / summary['total_invested_money'] >= 0 else 'negative'}">
+                {format_percentage((summary['total_revenue'] - summary['total_expenses']) / summary['total_invested_money'] if summary['total_invested_money'] > 0 else 0)}</div>
+            <div style="color: #2ECC71;">↑ 3% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col10:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Investment ROI</div>
+            <div class="metric-value positive">{format_percentage(summary['total_revenue'] / summary['total_invested_money'] if summary['total_invested_money'] > 0 else 0)}</div>
+            <div style="color: #2ECC71;">↑ 1% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Add a third row for additional metrics
+    st.markdown("---")
+    col11, col12, col13, col14, col15 = st.columns(5)
+    
+    with col11:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Total Money in Business</div>
+            <div class="metric-value positive">{format_currency(summary['total_revenue'] + summary['total_invested_money'] + summary['total_inbound_loans'])}</div>
+            <div style="color: #2ECC71;">↑ 10% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col12:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Total Used Amount</div>
+            <div class="metric-value negative">{format_currency(summary['total_expenses'])}</div>
+            <div style="color: #E74C3C;">↑ 5% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col13:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Available Capital</div>
+            <div class="metric-value positive">{format_currency((summary['total_revenue'] + summary['total_invested_money'] + summary['total_inbound_loans']) - summary['total_expenses'])}</div>
+            <div style="color: #2ECC71;">↑ 8% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col14:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Capital Efficiency</div>
+            <div class="metric-value {'positive' if summary['total_revenue'] / summary['total_expenses'] >= 1 else 'negative'}">
+                {format_percentage(summary['total_revenue'] / summary['total_expenses'] if summary['total_expenses'] > 0 else 0)}</div>
+            <div style="color: #2ECC71;">↑ 3% vs last period</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col15:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">Burn Rate</div>
+            <div class="metric-value negative">{format_currency(summary['total_expenses'] / 30 if summary['total_expenses'] > 0 else 0)}/day</div>
+            <div style="color: #E74C3C;">↑ 2% vs last period</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -687,7 +792,18 @@ def show_add_transaction():
                     for error in validation_errors:
                         st.error(error)
                 else:
-                    add_transaction(date, description, category, amount, trans_type)
+                    # Use the new service layer
+                    transaction_service = dependency_factory.get_transaction_service()
+                    from domain.entities import Transaction
+                    transaction = Transaction(
+                        id=None,
+                        date=str(date),
+                        description=description,
+                        category=category,
+                        amount=amount,
+                        type=trans_type
+                    )
+                    transaction_service.create_transaction(transaction)
                     st.success("Transaction added successfully!")
                     st.rerun()
             except Exception as e:
@@ -1217,6 +1333,86 @@ def generate_pdf_report():
 def convert_df_to_csv(df):
     """Convert a dataframe to CSV format."""
     return df.to_csv(index=False).encode('utf-8')
+
+
+def export_data():
+    """Export various data types to different formats"""
+    st.subheader("Data Export")
+    
+    export_type = st.selectbox(
+        "Select data type to export",
+        ["Transactions", "Employees", "Budgets", "Investments", "Loans"]
+    )
+    
+    export_format = st.selectbox(
+        "Select export format",
+        ["CSV", "Excel", "PDF"]
+    )
+    
+    if st.button("Export Data"):
+        try:
+            if export_type == "Transactions":
+                data = get_transactions()
+                filename = f"transactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            elif export_type == "Employees":
+                data = get_employees()
+                filename = f"employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            elif export_type == "Budgets":
+                data = get_budgets()
+                filename = f"budgets_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            elif export_type == "Investments":
+                data = get_investments()
+                filename = f"investments_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            elif export_type == "Loans":
+                data = get_loans()
+                filename = f"loans_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            if data.empty:
+                st.warning(f"No {export_type.lower()} to export")
+                return
+            
+            if export_format == "CSV":
+                csv_data = data.to_csv(index=False)
+                st.download_button(
+                    label=f"Download {export_type} as CSV",
+                    data=csv_data,
+                    file_name=f"{filename}.csv",
+                    mime="text/csv"
+                )
+            elif export_format == "Excel":
+                from io import BytesIO
+                buffer = BytesIO()
+                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                    data.to_excel(writer, sheet_name=export_type, index=False)
+                
+                st.download_button(
+                    label=f"Download {export_type} as Excel",
+                    data=buffer.getvalue(),
+                    file_name=f"{filename}.xlsx",
+                    mime="application/vnd.ms-excel"
+                )
+            elif export_format == "PDF":
+                # For PDF export, we'll use the advanced reporting module
+                from advanced_reporting import AdvancedReporting
+                reporter = AdvancedReporting()
+                
+                # Generate a simple report for the data
+                report_data = {
+                    'type': export_type.lower(),
+                    'date_range': {},
+                    'filters': {},
+                    'group_by': 'category',
+                    'metrics': ['amount']
+                }
+                
+                report = reporter.custom_report_builder(report_data)
+                
+                # For now, we'll show a message since full PDF generation is complex
+                st.success(f"{export_type} PDF export would be generated here")
+                
+        except Exception as e:
+            logger.error(f"Error in data export: {str(e)}\n{traceback.format_exc()}")
+            st.error(f"Export failed: {str(e)}")
 
 
 def show_manage_investments():
