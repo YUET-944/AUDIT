@@ -420,19 +420,19 @@ def main():
     display_budget_alerts()
     
     # Route to selected page
-    if menu == "Dashboard":
+    if "Dashboard" in menu:
         show_dashboard()
-    elif menu == "Add Transaction":
+    elif "Add Transaction" in menu:
         show_add_transaction()
-    elif menu == "Manage Employees":
+    elif "Manage Employees" in menu:
         show_manage_employees()
-    elif menu == "Set Budgets":
+    elif "Set Budgets" in menu:
         show_set_budgets()
-    elif menu == "Manage Investments":
+    elif "Manage Investments" in menu:
         show_manage_investments()
-    elif menu == "Manage Loans":
+    elif "Manage Loans" in menu:
         show_manage_loans()
-    elif menu == "View Reports":
+    elif "View Reports" in menu:
         show_reports()
 
 

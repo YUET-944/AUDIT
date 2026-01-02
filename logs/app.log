@@ -116,3 +116,9 @@ NotImplementedError: Prefix not defined
 2026-01-02 08:41:31,557 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
 2026-01-02 08:41:31,559 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
 2026-01-02 08:41:31,569 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 08:48:47,116 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 08:48:47,117 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 08:48:47,118 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
+2026-01-02 08:50:52,360 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 08:50:52,361 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 08:50:52,362 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
