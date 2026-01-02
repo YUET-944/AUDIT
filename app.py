@@ -68,6 +68,25 @@ st.markdown("""
         --card-bg: #FFFFFF;
         --text-dark: #0A2540;
         --text-light: #7f8c8d;
+        --sidebar-bg: #1a2f4a;
+        --sidebar-hover: #243b55;
+        --border-color: #e0e0e0;
+        --success: #27ae60;
+        --warning: #f39c12;
+        --danger: #e74c3c;
+        --info: #3498db;
+    }
+    
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --primary-color: #2c3e50;
+            --background-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-dark: #f0f0f0;
+            --text-light: #b0b0b0;
+            --border-color: #333333;
+        }
     }
     
     /* Header styling */
@@ -80,31 +99,42 @@ st.markdown("""
     .metric-card {
         background-color: var(--card-bg);
         padding: 20px;
-        border-radius: 6px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         text-align: center;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border-bottom: 3px solid var(--primary-color);
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--primary-color);
+        height: 130px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
     
     .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
     }
     
     .metric-value {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
-        margin: 12px 0;
+        margin: 8px 0;
         color: var(--primary-color);
+        word-wrap: break-word;
     }
     
     .metric-label {
-        font-size: 16px;
+        font-size: 14px;
         color: var(--text-light);
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        margin-bottom: 5px;
+    }
+    
+    .metric-trend {
+        font-size: 12px;
+        margin-top: 5px;
     }
     
     .positive {
@@ -116,7 +146,7 @@ st.markdown("""
     }
     
     .warning {
-        color: #f39c12;
+        color: var(--warning);
         font-weight: 600;
     }
     
@@ -133,13 +163,16 @@ st.markdown("""
         color: white;
         border: none;
         border-radius: 6px;
-        padding: 8px 16px;
+        padding: 10px 20px;
         font-weight: 600;
-        transition: background-color 0.3s ease;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     .stButton>button:hover {
         background-color: #081d33;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
     
     /* Danger button */
@@ -153,23 +186,48 @@ st.markdown("""
     
     /* Data frames */
     .stDataFrame {
-        border-radius: 6px;
+        border-radius: 8px;
         overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
     
     /* Sidebar */
     [data-testid=stSidebar] {
-        background-color: var(--primary-color);
+        background-color: var(--sidebar-bg);
+        color: white;
+        border-right: 1px solid var(--border-color);
     }
     
     [data-testid=stSidebar] * {
         color: white;
     }
     
+    /* Sidebar navigation */
+    .sidebar-nav {
+        padding: 20px 0;
+    }
+    
+    .sidebar-nav-item {
+        padding: 10px 15px;
+        margin: 5px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .sidebar-nav-item:hover {
+        background-color: var(--sidebar-hover);
+    }
+    
+    .sidebar-nav-item.active {
+        background-color: var(--primary-color);
+        font-weight: 600;
+    }
+    
     /* Progress bars for budget alerts */
     .budget-progress {
-        height: 10px;
-        border-radius: 5px;
+        height: 8px;
+        border-radius: 4px;
         margin-top: 8px;
     }
     
@@ -182,6 +240,100 @@ st.markdown("""
         background-color: var(--primary-color);
         color: white;
         margin-bottom: 24px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Transaction table enhancements */
+    .transaction-row {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .transaction-income {
+        border-left: 4px solid var(--success);
+    }
+    
+    .transaction-expense {
+        border-left: 4px solid var(--danger);
+    }
+    
+    .transaction-salary {
+        border-left: 4px solid var(--warning);
+    }
+    
+    .transaction-investment {
+        border-left: 4px solid var(--info);
+    }
+    
+    .transaction-loan {
+        border-left: 4px solid var(--accent-color);
+    }
+    
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .status-active {
+        background-color: rgba(39, 174, 96, 0.2);
+        color: var(--success);
+    }
+    
+    .status-pending {
+        background-color: rgba(243, 156, 18, 0.2);
+        color: var(--warning);
+    }
+    
+    .status-inactive {
+        background-color: rgba(231, 76, 60, 0.2);
+        color: var(--danger);
+    }
+    
+    /* Loading spinner */
+    .loading-spinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+    
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top: 4px solid var(--primary-color);
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .metric-card {
+            height: 120px;
+            padding: 15px;
+        }
+        
+        .metric-value {
+            font-size: 20px;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+        }
+        
+        .metric-trend {
+            font-size: 11px;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -208,17 +360,31 @@ def main():
     
     st.markdown("---")
     
-    # Sidebar navigation
-    st.sidebar.title("🧭 Navigation")
+    # Enhanced sidebar navigation
+    st.sidebar.markdown("<h3 style='color: white; text-align: center; margin-bottom: 20px;'>💼 Algo Hub</h3>", unsafe_allow_html=True)
     
     # Display company logo in sidebar if it exists
     if os.path.exists("Algohub.png"):
-        st.sidebar.image("Algohub.png", width=150)
+        st.sidebar.image("Algohub.png", width=120, caption="")
+        st.sidebar.markdown("---")
     
+    # Navigation menu
     menu = st.sidebar.radio(
-        "Go to",
-        ["Dashboard", "Add Transaction", "Manage Employees", "Set Budgets", "Manage Investments", "Manage Loans", "View Reports"]
+        "Navigation",
+        ["🏠 Dashboard", "➕ Add Transaction", "👥 Manage Employees", "📊 Set Budgets", "💼 Manage Investments", "💳 Manage Loans", "📈 View Reports"]
     )
+    
+    # Add some quick stats in sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**📊 Quick Stats**")
+    summary = get_financial_summary()
+    st.sidebar.metric("Total Revenue", format_currency(summary['total_revenue']))
+    st.sidebar.metric("Cash Balance", format_currency(summary['cash_balance']))
+    
+    # Add theme toggle (placeholder for future implementation)
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**🎨 Theme**")
+    theme = st.sidebar.selectbox("Theme Selection", ["Light", "Dark"], key="theme_select")
     
     # Initialize session state for data editor
     if 'transactions_edited' not in st.session_state:
@@ -534,12 +700,53 @@ def show_dashboard():
             fig.update_layout(title="Budget Allocation by Department")
             st.plotly_chart(fig, width='stretch')
             
-            # Show budget usage
+            # Show budget usage with enhanced visualization
             st.write("Budget Usage:")
             for _, row in budgets_df.iterrows():
                 usage_percent = (row['actual_spent'] / row['monthly_budget']) * 100 if row['monthly_budget'] > 0 else 0
-                st.progress(min(usage_percent/100, 1.0))
-                st.write(f"{row['category']}: {format_currency(row['actual_spent'])} / {format_currency(row['monthly_budget'])} ({usage_percent:.1f}%)")
+                        
+                # Create a more detailed budget status display
+                col_budget, col_usage = st.columns([3, 2])
+                with col_budget:
+                    st.write(f"**{row['category']}**")
+                            
+                with col_usage:
+                    # Add color-coded status indicator
+                    if usage_percent >= 90:
+                        status_color = "--danger"
+                        status_text = "⚠️ Over Budget"
+                    elif usage_percent >= 75:
+                        status_color = "--warning"
+                        status_text = "⚠️ High Usage"
+                    elif usage_percent >= 50:
+                        status_color = "--info"
+                        status_text = "📊 Good"
+                    else:
+                        status_color = "--success"
+                        status_text = "✅ Low Usage"
+                            
+                    st.markdown(f"<span style='color: var({status_color}); font-weight: bold;'>{status_text}</span>", unsafe_allow_html=True)
+                        
+                # Create a progress bar with color coding
+                progress_style = ""
+                if usage_percent >= 90:
+                    progress_style = "background: linear-gradient(to right, var(--danger), var(--danger));"
+                elif usage_percent >= 75:
+                    progress_style = "background: linear-gradient(to right, var(--warning), var(--warning));"
+                else:
+                    progress_style = "background: linear-gradient(to right, var(--success), var(--success));"
+                        
+                progress_html = f"""<div style='background-color: #e0e0e0; border-radius: 10px; height: 20px; overflow: hidden;'>
+                        <div style='width: {min(usage_percent, 100)}%; height: 100%; {progress_style}'>
+                            <div style='display: flex; align-items: center; justify-content: center; height: 100%; color: white; font-size: 12px;'>
+                                {usage_percent:.1f}%
+                            </div>
+                        </div>
+                      </div>"""
+                st.markdown(progress_html, unsafe_allow_html=True)
+                        
+                st.write(f"{format_currency(row['actual_spent'])} / {format_currency(row['monthly_budget'])}")
+                st.markdown("---")
         else:
             st.info("No budget data available.")
         
@@ -631,8 +838,18 @@ def show_dashboard():
     investments_df = get_investments()
     
     if not investments_df.empty:
+        # Add investment filtering
+        col_type, col_date = st.columns([2, 1])
+        with col_type:
+            inv_type_filter = st.selectbox("Filter by Type", ["All"] + sorted(investments_df['investment_type'].unique()) if not investments_df.empty else ["All"], key="inv_type_filter")
+        
+        # Apply filters
+        filtered_investments = investments_df
+        if inv_type_filter != "All":
+            filtered_investments = filtered_investments[filtered_investments['investment_type'] == inv_type_filter]
+        
         # Display investments with delete option
-        for index, row in investments_df.iterrows():
+        for index, row in filtered_investments.iterrows():
             col1, col2, col3, col4, col5, col6 = st.columns([2, 2, 2, 2, 2, 1])
             col1.write(row['investor_name'])
             col2.write(row['investment_type'])
@@ -645,6 +862,10 @@ def show_dashboard():
                 delete_investment(row['id'])
                 st.success(f"Investment by '{row['investor_name']}' deleted successfully!")
                 st.rerun()
+        
+        # Show info if filtered results are empty
+        if filtered_investments.empty and inv_type_filter != "All":
+            st.info(f"No {inv_type_filter} investments found.")
         
         # Export investments data
         csv = convert_df_to_csv(investments_df)
@@ -672,8 +893,22 @@ def show_dashboard():
     loans_df = get_loans()
     
     if not loans_df.empty:
+        # Add loan filtering
+        col_type, col_status = st.columns([2, 1])
+        with col_type:
+            loan_type_filter = st.selectbox("Filter by Type", ["All"] + sorted(loans_df['loan_type'].unique()) if not loans_df.empty else ["All"], key="loan_type_filter")
+        with col_status:
+            loan_status_filter = st.selectbox("Filter by Status", ["All"] + sorted(loans_df['status'].unique()) if not loans_df.empty else ["All"], key="loan_status_filter")
+        
+        # Apply filters
+        filtered_loans = loans_df
+        if loan_type_filter != "All":
+            filtered_loans = filtered_loans[filtered_loans['loan_type'] == loan_type_filter]
+        if loan_status_filter != "All":
+            filtered_loans = filtered_loans[filtered_loans['status'] == loan_status_filter]
+        
         # Display loans with edit and delete options
-        for index, row in loans_df.iterrows():
+        for index, row in filtered_loans.iterrows():
             col1, col2, col3, col4, col5, col6, col7 = st.columns([2, 2, 1, 2, 2, 2, 1])
             col1.write(row['lender_name'])
             col2.write(row['loan_direction'])
@@ -687,6 +922,10 @@ def show_dashboard():
                 delete_loan(row['id'])
                 st.success(f"Loan from '{row['lender_name']}' deleted successfully!")
                 st.rerun()
+        
+        # Show info if filtered results are empty
+        if filtered_loans.empty and (loan_type_filter != "All" or loan_status_filter != "All"):
+            st.info("No loans match the selected filters.")
         
         # Export loans data
         csv = convert_df_to_csv(loans_df)
@@ -769,46 +1008,100 @@ def show_add_transaction():
             st.success(f"Loan of {format_currency(loan_received_amount)} from {lender_name} added successfully!")
             st.rerun()
     
-    # Transaction form
+    # Enhanced transaction form with multi-step capability
     st.subheader("Manual Transaction Entry")
-    with st.form("transaction_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            date = st.date_input("Date", datetime.now())
-            description = st.text_input("Description")
+    
+    # Multi-step form
+    step = st.radio("Transaction Details", ["Basic", "Detailed"], horizontal=True, key="trans_detail_level")
+    
+    if step == "Basic":
+        with st.form("basic_transaction_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                date = st.date_input("Date", datetime.now())
+                description = st.text_input("Description")
+            
+            with col2:
+                amount = st.number_input("Amount", min_value=0.0, format="%.2f")
+                trans_type = st.selectbox("Type", ["Income", "Expense", "Salary", "Investment", "Loan"])
+            
             category = st.text_input("Category")
             
-        with col2:
-            amount = st.number_input("Amount", min_value=0.0, format="%.2f")
-            trans_type = st.selectbox("Type", ["Income", "Expense", "Salary", "Investment", "Loan"])
-        
-        submitted = st.form_submit_button("Add Transaction")
-        
-        if submitted:
-            try:
-                validation_errors = validate_transaction(date, description, category, amount, trans_type)
-                if validation_errors:
-                    for error in validation_errors:
-                        st.error(error)
-                else:
-                    # Use the new service layer
-                    transaction_service = dependency_factory.get_transaction_service()
-                    from domain.entities import Transaction
-                    transaction = Transaction(
-                        id=None,
-                        date=str(date),
-                        description=description,
-                        category=category,
-                        amount=amount,
-                        type=trans_type
-                    )
-                    transaction_service.create_transaction(transaction)
-                    st.success("Transaction added successfully!")
-                    st.rerun()
-            except Exception as e:
-                logger.error(f"Error adding transaction: {str(e)}\n{traceback.format_exc()}")
-                st.error(f"Failed to add transaction: {str(e)}")
+            submitted = st.form_submit_button("Add Transaction", type="primary")
+            
+            if submitted:
+                try:
+                    validation_errors = validate_transaction(date, description, category, amount, trans_type)
+                    if validation_errors:
+                        for error in validation_errors:
+                            st.error(error)
+                    else:
+                        # Use the new service layer
+                        transaction_service = dependency_factory.get_transaction_service()
+                        from domain.entities import Transaction
+                        transaction = Transaction(
+                            id=None,
+                            date=str(date),
+                            description=description,
+                            category=category,
+                            amount=amount,
+                            type=trans_type
+                        )
+                        transaction_service.create_transaction(transaction)
+                        st.success("Transaction added successfully!")
+                        st.rerun()
+                except Exception as e:
+                    logger.error(f"Error adding transaction: {str(e)}\n{traceback.format_exc()}")
+                    st.error(f"Failed to add transaction: {str(e)}")
+    
+    else:  # Detailed form
+        with st.form("detailed_transaction_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                date = st.date_input("Date", datetime.now())
+                description = st.text_input("Description", help="Provide detailed information about the transaction")
+                trans_type = st.selectbox("Type", ["Income", "Expense", "Salary", "Investment", "Loan"])
+            
+            with col2:
+                amount = st.number_input("Amount", min_value=0.0, format="%.2f")
+                category = st.selectbox("Category", ["General", "Office Supplies", "Travel", "Marketing", "Utilities", "Salary", "Loan", "Investment", "Other"])
+            
+            # Additional fields for detailed form
+            st.write("Additional Information")
+            col3, col4 = st.columns(2)
+            with col3:
+                reference_number = st.text_input("Reference Number (Optional)", help="Invoice number, receipt number, etc.")
+            with col4:
+                notes = st.text_area("Notes (Optional)", help="Any additional notes about the transaction")
+            
+            submitted = st.form_submit_button("Add Transaction", type="primary")
+            
+            if submitted:
+                try:
+                    validation_errors = validate_transaction(date, description, category, amount, trans_type)
+                    if validation_errors:
+                        for error in validation_errors:
+                            st.error(error)
+                    else:
+                        # Use the new service layer
+                        transaction_service = dependency_factory.get_transaction_service()
+                        from domain.entities import Transaction
+                        transaction = Transaction(
+                            id=None,
+                            date=str(date),
+                            description=description,
+                            category=category,
+                            amount=amount,
+                            type=trans_type
+                        )
+                        transaction_service.create_transaction(transaction)
+                        st.success("Transaction added successfully!")
+                        st.rerun()
+                except Exception as e:
+                    logger.error(f"Error adding transaction: {str(e)}\n{traceback.format_exc()}")
+                    st.error(f"Failed to add transaction: {str(e)}")
 
     # Display existing transactions with edit and delete options
     st.subheader("📋 Existing Transactions")
@@ -896,29 +1189,62 @@ def show_add_transaction():
     total_pages = (total_transactions + page_size - 1) // page_size  # Ceiling division
     
     if not transactions_df.empty:
-        # Display transactions with edit and delete buttons
+        # Display transactions with enhanced visual indicators
         st.subheader(f"All Transactions (Page {st.session_state.transaction_page} of {total_pages})")
-        for index, row in transactions_df.iterrows():
-            col1, col2, col3, col4, col5, col6, col7 = st.columns([2, 2, 2, 1, 2, 1, 1])
-            col1.write(str(row['date']))
-            col2.write(row['description'])
-            col3.write(row['category'])
-            col4.write(format_currency(row['amount']))
-            col5.write(row['type'])
+        
+        # Add transaction type filter
+        trans_type_filter = st.selectbox("Filter by Type", ["All"] + sorted(transactions_df['type'].unique()) if not transactions_df.empty else ["All"], key="trans_type_filter")
+        
+        filtered_transactions = transactions_df
+        if trans_type_filter != "All":
+            filtered_transactions = transactions_df[transactions_df['type'] == trans_type_filter]
+        
+        # Display filtered transactions
+        for index, row in filtered_transactions.iterrows():
+            # Add visual indicator based on transaction type
+            trans_class = f"transaction-row transaction-{row['type'].lower()}"
             
-            # Edit button
-            with col6:
-                if st.button(f"✏️", key=f"edit_trans_{row['id']}"):
-                    st.session_state.editing_transaction = row['id']
-                    st.session_state.editing_transaction_data = row
-                    st.rerun()
-            
-            # Delete button for each transaction
-            with col7:
-                if st.button("🗑️", key=f"del_trans_{row['id']}"):
-                    delete_transaction(row['id'])
-                    st.success(f"Transaction '{row['description']}' deleted successfully!")
-                    st.rerun()
+            with st.container():
+                col1, col2, col3, col4, col5, col6, col7 = st.columns([2, 2, 2, 1, 2, 1, 1])
+                
+                with col1:
+                    st.write(f"**{str(row['date'])}**")
+                with col2:
+                    st.write(row['description'])
+                with col3:
+                    st.write(row['category'])
+                with col4:
+                    st.write(format_currency(row['amount']))
+                with col5:
+                    # Add status badge for transaction type
+                    type_badge = ""
+                    if row['type'] == "Income":
+                        type_badge = f"<span class='status-badge status-active'>{row['type']}</span>"
+                    elif row['type'] == "Expense":
+                        type_badge = f"<span class='status-badge status-inactive'>{row['type']}</span>"
+                    elif row['type'] == "Salary":
+                        type_badge = f"<span class='status-badge status-pending'>{row['type']}</span>"
+                    else:
+                        type_badge = f"<span class='status-badge'>{row['type']}</span>"
+                    st.markdown(type_badge, unsafe_allow_html=True)
+                
+                # Edit button
+                with col6:
+                    if st.button(f"✏️", key=f"edit_trans_{row['id']}"):
+                        st.session_state.editing_transaction = row['id']
+                        st.session_state.editing_transaction_data = row
+                        st.rerun()
+                
+                # Delete button for each transaction
+                with col7:
+                    if st.button("🗑️", key=f"del_trans_{row['id']}"):
+                        delete_transaction(row['id'])
+                        st.success(f"Transaction '{row['description']}' deleted successfully!")
+                        st.rerun()
+        
+        # Add empty state if no transactions match filter
+        if filtered_transactions.empty and trans_type_filter != "All":
+            st.info(f"No {trans_type_filter} transactions found.")
         
         # Pagination controls
         col1, col2, col3 = st.columns([1, 2, 1])
@@ -984,9 +1310,23 @@ def show_manage_employees():
     employees_df = get_employees()
     
     if not employees_df.empty:
+        # Add employee filtering
+        col_dept, col_search = st.columns([2, 1])
+        with col_dept:
+            dept_filter = st.selectbox("Filter by Department", ["All"] + sorted(employees_df['department'].unique()) if not employees_df.empty else ["All"], key="emp_dept_filter")
+        with col_search:
+            emp_search = st.text_input("Search by Name", key="emp_search")
+        
+        # Apply filters
+        filtered_employees = employees_df
+        if dept_filter != "All":
+            filtered_employees = filtered_employees[filtered_employees['department'] == dept_filter]
+        if emp_search:
+            filtered_employees = filtered_employees[filtered_employees['name'].str.contains(emp_search, case=False)]
+        
         # Make the dataframe editable
         edited_employees = st.data_editor(
-            employees_df,
+            filtered_employees,
             width='stretch',
             num_rows="dynamic",
             column_config={
@@ -998,6 +1338,10 @@ def show_manage_employees():
                 "deductions": st.column_config.NumberColumn("Deductions", format="PKR %.2f")
             }
         )
+        
+        # Show info if filtered results are empty
+        if filtered_employees.empty and (dept_filter != "All" or emp_search):
+            st.info("No employees match the selected filters.")
         
         # Save changes button
         if st.button("💾 Save Changes") and not employees_df.equals(edited_employees):

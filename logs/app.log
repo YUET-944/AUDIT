@@ -103,3 +103,16 @@ NotImplementedError: Prefix not defined
 2026-01-02 07:26:07,506 - caching - INFO - worker:327 - Processing background job e2b8a19d-0046-44cc-b558-b79e12964dc9: test_job
 2026-01-02 07:26:07,507 - caching - ERROR - worker:350 - Unknown job type: test_job
 2026-01-02 07:26:07,507 - caching - ERROR - worker:361 - Job e2b8a19d-0046-44cc-b558-b79e12964dc9 failed
+2026-01-02 07:41:48,002 - advanced_reporting - INFO - cash_flow_forecasting:109 - Generated cash flow forecast for 3 months ahead
+2026-01-02 07:41:48,003 - advanced_reporting - INFO - wrapper:81 - cash_flow_forecasting executed in 0.0287s
+2026-01-02 07:41:48,026 - advanced_reporting - INFO - budget_variance_analysis:136 - Found 1 budget categories with significant variance
+2026-01-02 07:41:48,026 - advanced_reporting - INFO - wrapper:81 - budget_variance_analysis executed in 0.0021s
+2026-01-02 07:41:48,052 - advanced_reporting - INFO - financial_ratios_analysis:180 - Calculated financial ratios
+2026-01-02 07:41:48,052 - advanced_reporting - INFO - wrapper:81 - financial_ratios_analysis executed in 0.0052s
+2026-01-02 07:41:48,133 - caching - INFO - add_job:456 - Added job 689eeff8-eb55-4738-8cd9-2050d03ee385 of type test_job to queue
+2026-01-02 07:41:48,133 - caching - INFO - worker:327 - Processing background job 689eeff8-eb55-4738-8cd9-2050d03ee385: test_job
+2026-01-02 07:41:48,134 - caching - ERROR - worker:350 - Unknown job type: test_job
+2026-01-02 07:41:48,134 - caching - ERROR - worker:361 - Job 689eeff8-eb55-4738-8cd9-2050d03ee385 failed
+2026-01-02 08:41:31,557 - caching - ERROR - __init__:31 - Failed to connect to Redis: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.
+2026-01-02 08:41:31,559 - caching - WARNING - init_cache_table:42 - Redis unavailable, using fallback
+2026-01-02 08:41:31,569 - caching - INFO - init_cache_table:63 - SQLite cache table initialized as fallback
